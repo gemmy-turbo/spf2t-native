@@ -30,8 +30,11 @@ struct NativeMatchRuntime {
  // Explicit fixture/debug adapter retained for pre-boot source scene checks.
  void begin_paid_arcade(unsigned players=1){restart();arcade.begin(players);cabinet.owner=NativeCabinetSession::Owner::arcade;}
  void tick(std::array<std::uint16_t,2> input){
+  // Final-screen observers still read memory after an inactive source frame.
+  // Start a fresh host-frame budget even when no source work will run.
+  game.memory.accesses=0;
   if(arcade.active?arcade.terminal:(match.post_complete||scene_requested))return;
-  game.memory.accesses=0;ports=input_ports_from_words(input);coin_inputs.apply(ports);io.clear();
+  ports=input_ports_from_words(input);coin_inputs.apply(ports);io.clear();
   if(!scheduler.irq(Game::globals,game.memory,*this))throw std::runtime_error("Unsupported active cabinet service in native standalone IRQ");
   ++irqs;if(cabinet.owns_frame()){cabinet.frame();return;}arcade.before_main();
   if(arcade.active&&!arcade.normal_match()&&scheduler.continuation!=MatchContinuation::clear_first_wait&&scheduler.continuation!=MatchContinuation::clear_second_wait){arcade.frame();if(arcade.return_to_idle)cabinet.return_from_arcade();return;}
